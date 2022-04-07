@@ -43,6 +43,22 @@ async function getCjsConfig(options, argv) {
             libraryTarget: 'commonjs2',
             path: outputPath,
         },
+        devServer: {
+        historyApiFallback: true,
+        port: 8082,
+        client: {
+            logging: "verbose",
+            overlay: true,
+            progress: true,
+        },
+        headers: {
+            "Cache-Control": "max-age=15",
+        },
+        hot: true,
+        host: "0.0.0.0",
+        server: "http",
+        webSocketServer: false,
+    },
         plugins: [
             ...baseConfig.plugins,
             new DefinePlugin({

@@ -24,7 +24,7 @@
     "build": "npm run bundle && npm run bundle-dts && npm run docs",
     "prebuild-cdn": "rm -rf dist-cdn",
     "build-cdn": "webpack --config webpack-cdn.config.js --config-name umd && webpack --config webpack-cdn.config.js --config-name umd-loader",
-    "prebundle": "rm -rf dist",
+    "_prebundle": "rm -rf dist",
     "bundle": "webpack --config webpack.config.js",
     "bundle:analyze": "npm run --silent bundle -- --config-name umd --profile --json > webpack-stats.json && webpack-bundle-analyzer webpack-stats.json dist --default-sizes gzip",
     "bundle:watch": "npm run bundle -- --config-name cjs --watch --progress",
@@ -39,7 +39,8 @@
     "test": "jest --config jest-config.js",
     "test:coverage": "npm run test -- --coverage",
     "test:series": "npm run test -- --runInBand",
-    "test:watch": "npm run test -- --watch"
+    "test:watch": "npm run test -- --watch",
+    "devServer": "webpack serve --config webpack.config.js"
   },
   "dependencies": {
     "@babel/polyfill": "^7.4.4",
@@ -101,7 +102,8 @@
     "webpack": "^4.41.0",
     "webpack-assets-manifest": "^3.1.1",
     "webpack-bundle-analyzer": "^3.5.1",
-    "webpack-cli": "^3.3.9",
+    "webpack-cli": "^4",
+    "webpack-dev-server": "^4.8.1",
     "webpack-node-externals": "^1.7.2"
   },
   "standard-version": {
