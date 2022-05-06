@@ -1,16 +1,20 @@
-import { pick } from 'lodash';
+import {pick} from 'lodash';
 
-import { Address } from '../../../address';
-import { CheckoutStore, InternalCheckoutSelectors } from '../../../checkout';
-import { MissingDataError, MissingDataErrorType } from '../../../common/error/errors';
-import { OrderActionCreator, OrderPaymentRequestBody, OrderRequestBody } from '../../../order';
-import { OrderFinalizationNotRequiredError } from '../../../order/errors';
-import { PaymentArgumentInvalidError, PaymentMethodFailedError } from '../../errors';
+import {Address} from '../../../address';
+import {CheckoutStore, InternalCheckoutSelectors} from '../../../checkout';
+import {MissingDataError, MissingDataErrorType} from '../../../common/error/errors';
+import {OrderActionCreator, OrderPaymentRequestBody, OrderRequestBody} from '../../../order';
+import {OrderFinalizationNotRequiredError} from '../../../order/errors';
+import {PaymentArgumentInvalidError, PaymentMethodFailedError} from '../../errors';
 import isVaultedInstrument from '../../is-vaulted-instrument';
-import { CreditCardInstrument, NonceInstrument, PaymentInstrument, PaymentInstrumentMeta, VaultedInstrumentWithNonceVerification } from '../../payment';
+import {CreditCardInstrument,
+    NonceInstrument,
+    PaymentInstrument,
+    PaymentInstrumentMeta,
+    VaultedInstrumentWithNonceVerification} from '../../payment';
 import PaymentActionCreator from '../../payment-action-creator';
 import PaymentMethodActionCreator from '../../payment-method-action-creator';
-import { PaymentInitializeOptions, PaymentRequestOptions } from '../../payment-request-options';
+import {PaymentInitializeOptions, PaymentRequestOptions} from '../../payment-request-options';
 import PaymentStrategy from '../payment-strategy';
 
 import BraintreePaymentProcessor from './braintree-payment-processor';
@@ -26,7 +30,8 @@ export default class BraintreeCreditCardPaymentStrategy implements PaymentStrate
         private _paymentActionCreator: PaymentActionCreator,
         private _paymentMethodActionCreator: PaymentMethodActionCreator,
         private _braintreePaymentProcessor: BraintreePaymentProcessor
-    ) {}
+    ) {
+    }
 
     async initialize(options: PaymentInitializeOptions): Promise<InternalCheckoutSelectors> {
         const state = await this._store.dispatch(this._paymentMethodActionCreator.loadPaymentMethod(options.methodId));
@@ -53,7 +58,7 @@ export default class BraintreeCreditCardPaymentStrategy implements PaymentStrate
     }
 
     async execute(orderRequest: OrderRequestBody, options?: PaymentRequestOptions): Promise<InternalCheckoutSelectors> {
-        const { payment, ...order } = orderRequest;
+        const {payment, ...order} = orderRequest;
 
         if (!payment) {
             throw new PaymentArgumentInvalidError(['payment']);
@@ -64,29 +69,43 @@ export default class BraintreeCreditCardPaymentStrategy implements PaymentStrate
         );
 
         const {
-            billingAddress: { getBillingAddressOrThrow },
-            order: { getOrderOrThrow },
-            payment: { isPaymentDataRequired },
+            billingAddress: {getBillingAddressOrThrow},
+            order: {getOrderOrThrow},
+            payment: {isPaymentDataRequired},
         } = state;
 
         if (!isPaymentDataRequired(order.useStoreCredit)) {
             return state;
         }
+        // @RCA If Nonce is provided, paymentData is NonceInstrument of provided Nonce.
+        console.log("BigCommerce SDK | Braintree Payment Strategy");
+        let paymentData;
+        const origPaymentData = payment.paymentData;
+        if (origPaymentData !== undefined && 'nonce' in origPaymentData) {
+            console.log("BigCommerce SDK | Braintree Using Provided Nonce");
+            paymentData = {
+                nonce: origPaymentData.nonce,
+                deviceSessionId: this._deviceSessionId,
+            };
+        } else {
+            paymentData = this._isHostedFormInitialized ?
+                await this._prepareHostedPaymentData(
+                    payment,
+                    getBillingAddressOrThrow(),
+                    getOrderOrThrow().orderAmount
+                ) :
+                await this._preparePaymentData(
+                    payment,
+                    getBillingAddressOrThrow(),
+                    getOrderOrThrow().orderAmount
+                );
+        }
 
         try {
+            console.dir(paymentData);
             return this._store.dispatch(this._paymentActionCreator.submitPayment({
                 ...payment,
-                paymentData: this._isHostedFormInitialized ?
-                    await this._prepareHostedPaymentData(
-                        payment,
-                        getBillingAddressOrThrow(),
-                        getOrderOrThrow().orderAmount
-                    ) :
-                    await this._preparePaymentData(
-                        payment,
-                        getBillingAddressOrThrow(),
-                        getOrderOrThrow().orderAmount
-                    ),
+                paymentData,
             }));
         } catch (error) {
             this._handleError(error);
@@ -117,7 +136,7 @@ export default class BraintreeCreditCardPaymentStrategy implements PaymentStrate
     }
 
     private async _preparePaymentData(payment: OrderPaymentRequestBody, billingAddress: Address, orderAmount: number): Promise<PaymentInstrument & PaymentInstrumentMeta> {
-        const commonPaymentData = { deviceSessionId: this._deviceSessionId };
+        const commonPaymentData = {deviceSessionId: this._deviceSessionId};
 
         if (this._isSubmittingWithStoredCard(payment) || this._isStoringNewCard(payment)) {
             return {
@@ -146,7 +165,7 @@ export default class BraintreeCreditCardPaymentStrategy implements PaymentStrate
     }
 
     private async _prepareHostedPaymentData(payment: OrderPaymentRequestBody, billingAddress: Address, orderAmount: number): Promise<PaymentInstrument & PaymentInstrumentMeta> {
-        const commonPaymentData = { deviceSessionId: this._deviceSessionId };
+        const commonPaymentData = {deviceSessionId: this._deviceSessionId};
 
         if (this._shouldPerform3DSVerification(payment)) {
             return {
@@ -190,7 +209,7 @@ export default class BraintreeCreditCardPaymentStrategy implements PaymentStrate
             return false;
         }
 
-        const { paymentMethods: { getPaymentMethodOrThrow } } = this._store.getState();
+        const {paymentMethods: {getPaymentMethodOrThrow}} = this._store.getState();
         const paymentMethod = getPaymentMethodOrThrow(methodId, gatewayId);
 
         return paymentMethod.config.isHostedFormEnabled === true;
