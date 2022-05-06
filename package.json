@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/bigcommerce/checkout-sdk-js",
   "scripts": {
-    "prepare": "check-node-version --node '>=6' --npm '>=6'",
+    "prepare": "check-node-version --node \">=6\" --npm \">=6\"",
     "build": "npm run bundle && npm run bundle-dts && npm run docs",
     "_prebuild-cdn": "rm -rf dist-cdn",
     "build-cdn": "webpack --config webpack-cdn.config.js --config-name umd && webpack --config webpack-cdn.config.js --config-name umd-loader",
